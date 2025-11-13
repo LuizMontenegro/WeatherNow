@@ -4,9 +4,11 @@ type ParticleMode = 'sun' | 'rain' | 'snow'
 
 interface WeatherParticlesProps {
   mode: ParticleMode
+  precipitationProb?: number | null
+  windSpeed?: number | null
 }
 
-const WeatherParticles = ({ mode }: WeatherParticlesProps) => {
+const WeatherParticles = ({ mode, precipitationProb, windSpeed }: WeatherParticlesProps) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const rafRef = useRef<number | null>(null)
 
@@ -16,6 +18,13 @@ const WeatherParticles = ({ mode }: WeatherParticlesProps) => {
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
+    const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    if (reduced) {
+      // Respeitar redução de movimento
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
+      return
+    }
+
     let width = (canvas.width = canvas.offsetWidth)
     let height = (canvas.height = canvas.offsetHeight)
 
@@ -24,13 +33,23 @@ const WeatherParticles = ({ mode }: WeatherParticlesProps) => {
       height = canvas.height = canvas.offsetHeight
     }
 
-    const particles = Array.from({ length: mode === 'sun' ? 60 : mode === 'rain' ? 120 : 100 }).map(
+    const precipFactor = Math.min(Math.max((precipitationProb ?? 0) / 100, 0), 1)
+    const windFactor = Math.min(Math.max((windSpeed ?? 0) / 40, 0), 1) // normaliza até ~40
+    const baseCount = mode === 'sun' ? 50 : mode === 'rain' ? 120 : 100
+    const count = Math.floor(
+      baseCount * (mode === 'rain' ? (0.4 + 1.6 * precipFactor) : mode === 'snow' ? (0.6 + 0.8 * precipFactor) : (0.6 + 0.8 * windFactor))
+    )
+
+    const particles = Array.from({ length: count }).map(
       () => ({
         x: Math.random() * width,
         y: Math.random() * height,
         r: mode === 'snow' ? Math.random() * 2 + 1 : Math.random() * 1.2 + 0.6,
-        vy: mode === 'rain' ? Math.random() * 2 + 2.5 : Math.random() * 0.6 + 0.2,
-        vx: mode === 'snow' ? (Math.random() - 0.5) * 0.4 : 0,
+        vy:
+          mode === 'rain'
+            ? (Math.random() * 2 + 2.0) * (0.6 + 1.2 * (precipFactor + windFactor) / 2)
+            : Math.random() * 0.6 + 0.2,
+        vx: mode === 'snow' ? (Math.random() - 0.5) * (0.2 + 0.6 * windFactor) : 0,
       }),
     )
 
@@ -73,7 +92,7 @@ const WeatherParticles = ({ mode }: WeatherParticlesProps) => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current)
       observer.disconnect()
     }
-  }, [mode])
+  }, [mode, precipitationProb, windSpeed])
 
   return <canvas ref={canvasRef} className="particles-layer" />
 }

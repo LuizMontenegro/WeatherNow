@@ -1,13 +1,16 @@
 import { Umbrella, Wind } from 'lucide-react'
 import { getWeatherPresentation, formatDayName } from '../utils/weatherMeta'
 import type { DailyForecast } from '../types/weather'
+import type { AppSettings } from '../types/settings'
+import { windSuffix, degreeSuffix } from '../utils/units'
 
 interface ForecastListProps {
   items: DailyForecast[]
   loading?: boolean
+  settings?: AppSettings
 }
 
-const ForecastList = ({ items, loading }: ForecastListProps) => {
+const ForecastList = ({ items, loading, settings }: ForecastListProps) => {
   if (loading) {
     return (
       <div className="forecast glass-card skeleton">
@@ -44,21 +47,25 @@ const ForecastList = ({ items, loading }: ForecastListProps) => {
                   <Icon size={28} />
                   <span>{label}</span>
                 </div>
-                <div className="forecast-temps">
-                  <strong>{Math.round(day.maxTemp)}°</strong>
-                  <span>{Math.round(day.minTemp)}°</span>
-                </div>
+              <div className="forecast-temps">
+                <strong>
+                  {Math.round(day.maxTemp)}{settings ? degreeSuffix(settings.temperatureUnit) : '°'}
+                </strong>
+                <span>
+                  {Math.round(day.minTemp)}{settings ? degreeSuffix(settings.temperatureUnit) : '°'}
+                </span>
+              </div>
                 <div className="forecast-meta">
                   {typeof day.precipitationProbability === 'number' && (
                     <span>
                       <Umbrella size={16} /> {day.precipitationProbability}%
                     </span>
                   )}
-                  {typeof day.windSpeed === 'number' && (
-                    <span>
-                      <Wind size={16} /> {Math.round(day.windSpeed)} km/h
-                    </span>
-                  )}
+                {typeof day.windSpeed === 'number' && (
+                  <span>
+                    <Wind size={16} /> {Math.round(day.windSpeed)} {settings ? windSuffix(settings.windSpeedUnit) : 'km/h'}
+                  </span>
+                )}
                 </div>
               </div>
             )

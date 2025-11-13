@@ -4,12 +4,17 @@ import CurrentWeatherCard from './components/CurrentWeatherCard'
 import ForecastList from './components/ForecastList'
 import SearchBar from './components/SearchBar'
 import ThemeToggle from './components/ThemeToggle'
+import SettingsPanel from './components/SettingsPanel'
 import FavoritesBar from './components/FavoritesBar'
 import WeatherParticles from './components/WeatherParticles'
 import HourlyCharts from './components/HourlyCharts'
 import CompareGrid from './components/CompareGrid'
+import ShareLinkButton from './components/ShareLinkButton'
 import { useDebouncedValue } from './hooks/useDebouncedValue'
 import type { LocationOption, ThemeMode, WeatherData } from './types/weather'
+import type { AppSettings } from './types/settings'
+import { apiTemperatureUnit, apiWindSpeedUnit, loadSettings } from './utils/units'
+import { readLocationFromURL, writeURLState, readSettingsFromURL } from './utils/urlState'
 import { formatUpdatedAt, getGradientStyles } from './utils/weatherMeta'
 
 const defaultLocation: LocationOption = {
@@ -32,12 +37,17 @@ const App = () => {
     localStorage.setItem('theme', theme)
   }, [theme])
 
+  
+
   const [searchTerm, setSearchTerm] = useState('')
   const [suggestions, setSuggestions] = useState<LocationOption[]>([])
   const [isSearching, setIsSearching] = useState(false)
   const debouncedQuery = useDebouncedValue(searchTerm.trim(), 350)
 
-  const [selectedLocation, setSelectedLocation] = useState<LocationOption>(defaultLocation)
+  const [selectedLocation, setSelectedLocation] = useState<LocationOption>(() => {
+    if (typeof window === 'undefined') return defaultLocation
+    return readLocationFromURL() ?? defaultLocation
+  })
   const [favorites, setFavorites] = useState<LocationOption[]>(() => {
     try {
       const raw = localStorage.getItem('favorites')
@@ -48,9 +58,20 @@ const App = () => {
   })
   const [compareMode, setCompareMode] = useState(false)
   const [compareSelection, setCompareSelection] = useState<LocationOption[]>([])
+  const [settings, setSettings] = useState<AppSettings>(() => {
+    const s = loadSettings()
+    if (typeof window === 'undefined') return s
+    return readSettingsFromURL(s)
+  })
   const [weather, setWeather] = useState<WeatherData | null>(null)
   const [loadingWeather, setLoadingWeather] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [online, setOnline] = useState<boolean>(() => (typeof navigator !== 'undefined' ? navigator.onLine : true))
+  const [autoTheme, setAutoTheme] = useState(true)
+
+  useEffect(() => {
+    writeURLState(selectedLocation, settings)
+  }, [selectedLocation, settings])
 
   useEffect(() => {
     if (!debouncedQuery || debouncedQuery.length < 2) {
@@ -100,74 +121,93 @@ const App = () => {
     return () => controller.abort()
   }, [debouncedQuery])
 
-  useEffect(() => {
-    const controller = new AbortController()
-
-    const fetchWeather = async () => {
+  const fetchWeather = useCallback(async () => {
+    try {
       if (!selectedLocation) return
       setLoadingWeather(true)
       setError(null)
 
-      try {
-        const url = new URL('https://api.open-meteo.com/v1/forecast')
-        url.searchParams.set('latitude', selectedLocation.latitude.toString())
-        url.searchParams.set('longitude', selectedLocation.longitude.toString())
-        url.searchParams.set(
-          'current',
-          'temperature_2m,relative_humidity_2m,apparent_temperature,is_day,weather_code,wind_speed_10m',
-        )
-        url.searchParams.set(
-          'daily',
-          'weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,wind_speed_10m_max',
-        )
-        url.searchParams.set('hourly', 'temperature_2m,relative_humidity_2m')
-        url.searchParams.set('forecast_days', '7')
-        url.searchParams.set('timezone', 'auto')
+      const url = new URL('https://api.open-meteo.com/v1/forecast')
+      url.searchParams.set('latitude', selectedLocation.latitude.toString())
+      url.searchParams.set('longitude', selectedLocation.longitude.toString())
+      url.searchParams.set(
+        'current',
+        'temperature_2m,relative_humidity_2m,apparent_temperature,is_day,weather_code,wind_speed_10m',
+      )
+      url.searchParams.set(
+        'daily',
+        'weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,wind_speed_10m_max,sunrise,sunset',
+      )
+      url.searchParams.set('hourly', 'temperature_2m,relative_humidity_2m,precipitation_probability,wind_speed_10m')
+      url.searchParams.set('forecast_days', '7')
+      url.searchParams.set('timezone', 'auto')
+      url.searchParams.set('temperature_unit', apiTemperatureUnit(settings.temperatureUnit))
+      url.searchParams.set('wind_speed_unit', apiWindSpeedUnit(settings.windSpeedUnit))
 
-        const response = await fetch(url, { signal: controller.signal })
-        if (!response.ok) throw new Error('Não conseguimos carregar o clima agora.')
+      const response = await fetch(url)
+      if (!response.ok) throw new Error('Não conseguimos carregar o clima agora.')
 
-        const payload = await response.json()
+      const payload = await response.json()
 
-        const mapped: WeatherData = {
-          current: {
-            temperature: payload.current.temperature_2m,
-            apparentTemperature: payload.current.apparent_temperature,
-            humidity: payload.current.relative_humidity_2m,
-            windSpeed: payload.current.wind_speed_10m,
-            weatherCode: payload.current.weather_code,
-            isDay: Boolean(payload.current.is_day),
-          },
-          daily: (payload.daily.time ?? []).map((time: string, index: number) => ({
-            date: time,
-            maxTemp: payload.daily.temperature_2m_max[index],
-            minTemp: payload.daily.temperature_2m_min[index],
-            weatherCode: payload.daily.weather_code[index],
-            precipitationProbability: payload.daily.precipitation_probability_max?.[index],
-            windSpeed: payload.daily.wind_speed_10m_max?.[index],
-          })),
-          hourly: (payload.hourly?.time ?? []).slice(0, 24).map((t: string, i: number) => ({
-            time: t,
-            temperature: payload.hourly.temperature_2m?.[i] ?? 0,
-            humidity: payload.hourly.relative_humidity_2m?.[i] ?? 0,
-          })),
-          updatedAt: new Date().toISOString(),
-        }
-
-        setWeather(mapped)
-      } catch (err) {
-        if (err instanceof DOMException && err.name === 'AbortError') return
-        console.error(err)
-        setError('Algo saiu do previsto. Tente novamente em instantes.')
-      } finally {
-        setLoadingWeather(false)
+      const mapped: WeatherData = {
+        current: {
+          temperature: payload.current.temperature_2m,
+          apparentTemperature: payload.current.apparent_temperature,
+          humidity: payload.current.relative_humidity_2m,
+          windSpeed: payload.current.wind_speed_10m,
+          weatherCode: payload.current.weather_code,
+          isDay: Boolean(payload.current.is_day),
+        },
+        daily: (payload.daily.time ?? []).map((time: string, index: number) => ({
+          date: time,
+          maxTemp: payload.daily.temperature_2m_max[index],
+          minTemp: payload.daily.temperature_2m_min[index],
+          weatherCode: payload.daily.weather_code[index],
+          precipitationProbability: payload.daily.precipitation_probability_max?.[index],
+          windSpeed: payload.daily.wind_speed_10m_max?.[index],
+        })),
+        hourly: (payload.hourly?.time ?? []).slice(0, 24).map((t: string, i: number) => ({
+          time: t,
+          temperature: payload.hourly.temperature_2m?.[i] ?? 0,
+          humidity: payload.hourly.relative_humidity_2m?.[i] ?? 0,
+          precipitationProbability: payload.hourly.precipitation_probability?.[i],
+          windSpeed: payload.hourly.wind_speed_10m?.[i],
+        })),
+        sunrise: payload.daily?.sunrise?.[0],
+        sunset: payload.daily?.sunset?.[0],
+        updatedAt: new Date().toISOString(),
       }
+
+      setWeather(mapped)
+
+      if (autoTheme && mapped.sunrise && mapped.sunset) {
+        const now = new Date()
+        const sunrise = new Date(mapped.sunrise)
+        const sunset = new Date(mapped.sunset)
+        setTheme(now < sunrise || now > sunset ? 'dark' : 'light')
+      }
+    } catch (err) {
+      console.error(err)
+      setError('Algo saiu do previsto. Tente novamente em instantes.')
+    } finally {
+      setLoadingWeather(false)
     }
+  }, [selectedLocation, settings.temperatureUnit, settings.windSpeedUnit, autoTheme])
 
+  useEffect(() => {
     fetchWeather()
+  }, [fetchWeather])
 
-    return () => controller.abort()
-  }, [selectedLocation])
+  useEffect(() => {
+    const on = () => setOnline(true)
+    const off = () => setOnline(false)
+    window.addEventListener('online', on)
+    window.addEventListener('offline', off)
+    return () => {
+      window.removeEventListener('online', on)
+      window.removeEventListener('offline', off)
+    }
+  }, [])
 
   const gradient = useMemo(() => {
     if (weather?.current) {
@@ -266,6 +306,8 @@ const App = () => {
     >
       <WeatherParticles
         mode={weather?.current ? (weather.current.weatherCode === 0 ? 'sun' : weather.current.weatherCode >= 71 ? 'snow' : weather.current.weatherCode >= 51 ? 'rain' : 'sun') : 'sun'}
+        precipitationProb={weather?.daily?.[0]?.precipitationProbability}
+        windSpeed={weather?.current?.windSpeed}
       />
       <div className="overlay" />
       <main className="content">
@@ -275,7 +317,11 @@ const App = () => {
             <h1>{locationLabel}</h1>
             {weather && <span className="timestamp">{formatUpdatedAt(weather.updatedAt)}</span>}
           </div>
-          <ThemeToggle theme={theme} onToggle={() => setTheme(theme === 'light' ? 'dark' : 'light')} />
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+            <SettingsPanel value={settings} onChange={(s)=>{ setAutoTheme(false); setSettings(s) }} />
+            <ShareLinkButton />
+            <ThemeToggle theme={theme} onToggle={() => { setAutoTheme(false); setTheme(theme === 'light' ? 'dark' : 'light') }} />
+          </div>
         </header>
 
         <SearchBar
@@ -303,6 +349,7 @@ const App = () => {
           <div className="error-banner glass-card">
             <AlertTriangle size={18} />
             <p>{error}</p>
+            <button className="fav-btn" onClick={() => fetchWeather()}>Tentar novamente</button>
           </div>
         )}
 
@@ -311,6 +358,7 @@ const App = () => {
             location={locationLabel}
             data={weather?.current}
             loading={loadingWeather}
+            settings={settings}
             updatedAt={
               weather?.updatedAt
                 ? new Intl.DateTimeFormat('pt-BR', {
@@ -320,13 +368,14 @@ const App = () => {
                 : undefined
             }
           />
-          <ForecastList items={weather?.daily ?? []} loading={loadingWeather} />
+          <ForecastList items={weather?.daily ?? []} loading={loadingWeather} settings={settings} />
         </section>
 
-        {weather?.hourly && weather.hourly.length > 0 && <HourlyCharts data={weather.hourly} />}
+        {weather?.hourly && weather.hourly.length > 0 && <HourlyCharts data={weather.hourly} settings={settings} />}
 
         {compareMode && compareSelection.length > 0 && <CompareGrid selections={compareSelection} />}
       </main>
+      {!online && <div className="offline-banner">Você está offline. Exibindo dados em cache quando possível.</div>}
     </div>
   )
 }
