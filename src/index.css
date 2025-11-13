@@ -62,6 +62,15 @@ body {
   z-index: 1;
 }
 
+.particles-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+
 .content {
   position: relative;
   z-index: 2;
@@ -238,6 +247,83 @@ body {
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   gap: 1.5rem;
   align-items: stretch;
+}
+
+.charts {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.favorites-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.9rem 1rem;
+}
+
+.fav-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.fav-btn {
+  display: inline-flex;
+  gap: 0.4rem;
+  align-items: center;
+  border: 1px solid var(--glass-border);
+  background: rgba(255,255,255,0.06);
+  color: inherit;
+  padding: 0.5rem 0.7rem;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.fav-btn.active, .fav-btn.saved {
+  background: rgba(255,255,255,0.16);
+}
+
+.fav-list {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+}
+
+.chip.chip-active { background: rgba(255,255,255,0.2); }
+
+.chip-main {
+  border: none;
+  background: transparent;
+  color: inherit;
+  padding: 0.35rem 0.6rem 0.35rem 0.8rem;
+  cursor: pointer;
+}
+
+.chip-remove {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  display: grid;
+  place-items: center;
+  padding: 0.2rem 0.4rem 0.2rem 0.2rem;
+  cursor: pointer;
+}
+
+.compare-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1rem;
 }
 
 .current-card {

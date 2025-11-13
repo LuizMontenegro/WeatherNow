@@ -32,4 +32,5 @@ export interface WeatherData {
   current: CurrentWeather
   daily: DailyForecast[]
   updatedAt: string
+  hourly?: Array<{ time: string; temperature: number; humidity: number }>
 }
