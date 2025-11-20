@@ -7,10 +7,11 @@
 
   /* Colors - Deep Slate Theme */
   --color-bg: #020617;
-  --color-surface: rgba(30, 41, 59, 0.7);
-  /* More transparent for glass effect */
-  --color-surface-highlight: rgba(51, 65, 85, 0.8);
-  --color-border: rgba(255, 255, 255, 0.06);
+  --color-surface: rgba(30, 41, 59, 0.6);
+  /* More transparent (0.7 -> 0.6) */
+  --color-surface-highlight: rgba(51, 65, 85, 0.7);
+  --color-border: rgba(255, 255, 255, 0.1);
+  /* Slightly more visible border (0.06 -> 0.1) */
 
   --color-text-primary: #f1f5f9;
   --color-text-secondary: #94a3b8;
@@ -174,8 +175,10 @@ h6 {
   border-radius: var(--radius-lg);
   padding: var(--space-lg);
   transition: var(--transition-normal);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+  /* Enhanced shadow for depth */
 }
 
 .card:hover {
