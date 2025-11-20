@@ -15,9 +15,9 @@ const ShareLinkButton = () => {
   }
 
   return (
-    <button className="theme-toggle glass-card" onClick={onCopy} aria-label="Copiar link">
+    <button className="btn btn-ghost" onClick={onCopy} aria-label="Copiar link">
       <Share2 size={16} />
-      <span className="toggle-label">{copied ? 'Copiado!' : 'Copiar link'}</span>
+      <span className="text-sm">{copied ? 'Copiado!' : 'Copiar link'}</span>
     </button>
   )
 }

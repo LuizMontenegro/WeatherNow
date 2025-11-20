@@ -1,15 +1,15 @@
 import { AlertTriangle } from 'lucide-react'
-import { type CSSProperties, useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import CurrentWeatherCard from './components/CurrentWeatherCard'
 import ForecastList from './components/ForecastList'
 import SearchBar from './components/SearchBar'
 import ThemeToggle from './components/ThemeToggle'
 import SettingsPanel from './components/SettingsPanel'
 import FavoritesBar from './components/FavoritesBar'
-import WeatherParticles from './components/WeatherParticles'
 import HourlyCharts from './components/HourlyCharts'
 import CompareGrid from './components/CompareGrid'
 import ShareLinkButton from './components/ShareLinkButton'
+import Background from './components/Background'
 import { useDebouncedValue } from './hooks/useDebouncedValue'
 import type { LocationOption, ThemeMode, WeatherData } from './types/weather'
 import type { AppSettings } from './types/settings'
@@ -36,8 +36,6 @@ const App = () => {
     document.documentElement.setAttribute('data-theme', theme)
     localStorage.setItem('theme', theme)
   }, [theme])
-
-  
 
   const [searchTerm, setSearchTerm] = useState('')
   const [suggestions, setSuggestions] = useState<LocationOption[]>([])
@@ -66,8 +64,6 @@ const App = () => {
   const [weather, setWeather] = useState<WeatherData | null>(null)
   const [loadingWeather, setLoadingWeather] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [online, setOnline] = useState<boolean>(() => (typeof navigator !== 'undefined' ? navigator.onLine : true))
-  const [autoTheme, setAutoTheme] = useState(true)
 
   useEffect(() => {
     writeURLState(selectedLocation, settings)
@@ -179,46 +175,20 @@ const App = () => {
       }
 
       setWeather(mapped)
-
-      if (autoTheme && mapped.sunrise && mapped.sunset) {
-        const now = new Date()
-        const sunrise = new Date(mapped.sunrise)
-        const sunset = new Date(mapped.sunset)
-        setTheme(now < sunrise || now > sunset ? 'dark' : 'light')
-      }
     } catch (err) {
       console.error(err)
       setError('Algo saiu do previsto. Tente novamente em instantes.')
     } finally {
       setLoadingWeather(false)
     }
-  }, [selectedLocation, settings.temperatureUnit, settings.windSpeedUnit, autoTheme])
+  }, [selectedLocation, settings.temperatureUnit, settings.windSpeedUnit])
 
   useEffect(() => {
     fetchWeather()
   }, [fetchWeather])
 
-  useEffect(() => {
-    const on = () => setOnline(true)
-    const off = () => setOnline(false)
-    window.addEventListener('online', on)
-    window.addEventListener('offline', off)
-    return () => {
-      window.removeEventListener('online', on)
-      window.removeEventListener('offline', off)
-    }
-  }, [])
-
-  const gradient = useMemo(() => {
-    if (weather?.current) {
-      return getGradientStyles(weather.current.weatherCode, weather.current.isDay)
-    }
-    return getGradientStyles(2, true)
-  }, [weather])
-
-  const locationLabel = `${selectedLocation.name}${
-    selectedLocation.country ? `, ${selectedLocation.country}` : ''
-  }`
+  const locationLabel = `${selectedLocation.name}${selectedLocation.country ? `, ${selectedLocation.country}` : ''
+    }`
 
   const handleSelectLocation = (option: LocationOption) => {
     setSelectedLocation(option)
@@ -230,7 +200,7 @@ const App = () => {
     setFavorites(list)
     try {
       localStorage.setItem('favorites', JSON.stringify(list))
-    } catch {}
+    } catch { }
   }
 
   const onAddOrRemoveCurrent = () => {
@@ -288,94 +258,100 @@ const App = () => {
           setSelectedLocation({ name: 'Minha localização', latitude, longitude })
         }
       },
-      () => {},
+      () => { },
       { enableHighAccuracy: true, timeout: 10000 },
     )
   }, [])
 
   return (
-    <div
-      className={`app-shell ${theme}`}
-      style={
-        {
-          backgroundImage: gradient.backgroundImage,
-          backgroundColor: gradient.backgroundColor,
-          '--glow-color': gradient.glow,
-        } as CSSProperties
-      }
-    >
-      <WeatherParticles
-        mode={weather?.current ? (weather.current.weatherCode === 0 ? 'sun' : weather.current.weatherCode >= 71 ? 'snow' : weather.current.weatherCode >= 51 ? 'rain' : 'sun') : 'sun'}
-        precipitationProb={weather?.daily?.[0]?.precipitationProbability}
-        windSpeed={weather?.current?.windSpeed}
+    <div className={`app-shell ${theme}`} style={{ background: 'transparent' }}>
+      <Background
+        theme={theme}
+        weatherCode={weather?.current?.weatherCode}
+        isDay={weather?.current?.isDay}
       />
-      <div className="overlay" />
-      <main className="content">
-        <header className="top-bar">
+      <div className="app-container" style={{ position: 'relative', zIndex: 1 }}>
+        <header className="flex-row" style={{ justifyContent: 'space-between', padding: 'var(--space-md) 0' }}>
           <div>
-            <p className="eyebrow">Previsão personalizada</p>
-            <h1>{locationLabel}</h1>
-            {weather && <span className="timestamp">{formatUpdatedAt(weather.updatedAt)}</span>}
+            <p className="text-xs">Previsão do Tempo</p>
+            <h1 className="text-display">{selectedLocation.name}</h1>
+            <p className="text-subtitle">
+              {selectedLocation.country}
+              {weather && <span className="text-sm" style={{ opacity: 0.6, marginLeft: '0.5rem' }}>• Atualizado {formatUpdatedAt(weather.updatedAt)}</span>}
+            </p>
           </div>
-          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-            <SettingsPanel value={settings} onChange={(s)=>{ setAutoTheme(false); setSettings(s) }} />
+
+          <div className="flex-row">
+            <ThemeToggle theme={theme} onToggle={() => setTheme((prev) => (prev === 'light' ? 'dark' : 'light'))} />
+            <SettingsPanel value={settings} onChange={setSettings} />
             <ShareLinkButton />
-            <ThemeToggle theme={theme} onToggle={() => { setAutoTheme(false); setTheme(theme === 'light' ? 'dark' : 'light') }} />
           </div>
         </header>
 
-        <SearchBar
-          value={searchTerm}
-          onChange={setSearchTerm}
-          suggestions={suggestions}
-          loading={isSearching}
-          onSelect={handleSelectLocation}
-        />
+        <main className="content">
+          <section className="flex-col" style={{ gap: 'var(--space-md)', marginBottom: 'var(--space-xl)' }}>
+            <SearchBar
+              value={searchTerm}
+              onChange={setSearchTerm}
+              suggestions={suggestions}
+              loading={isSearching}
+              onSelect={handleSelectLocation}
+            />
 
-        <FavoritesBar
-          favorites={favorites}
-          current={selectedLocation}
-          comparing={compareMode}
-          compareSelection={compareSelection}
-          onAddOrRemoveCurrent={onAddOrRemoveCurrent}
-          onRemove={onRemoveFavorite}
-          onSelect={handleSelectLocation}
-          onToggleCompare={() => setCompareMode((v) => !v)}
-          onToggleCompareItem={toggleCompareSelection}
-          onUseGeolocation={useGeolocation}
-        />
+            <FavoritesBar
+              favorites={favorites}
+              current={selectedLocation}
+              comparing={compareMode}
+              compareSelection={compareSelection}
+              onAddOrRemoveCurrent={onAddOrRemoveCurrent}
+              onRemove={onRemoveFavorite}
+              onSelect={handleSelectLocation}
+              onToggleCompare={() => setCompareMode((v) => !v)}
+              onToggleCompareItem={toggleCompareSelection}
+              onUseGeolocation={useGeolocation}
+            />
+          </section>
 
-        {error && (
-          <div className="error-banner glass-card">
-            <AlertTriangle size={18} />
-            <p>{error}</p>
-            <button className="fav-btn" onClick={() => fetchWeather()}>Tentar novamente</button>
+          {error && (
+            <div className="card" style={{ borderColor: 'var(--color-danger)', color: 'var(--color-danger)' }}>
+              <div className="flex-row">
+                <AlertTriangle size={20} />
+                <p>{error}</p>
+                <button className="btn btn-ghost" onClick={() => fetchWeather()} style={{ marginLeft: 'auto' }}>Tentar novamente</button>
+              </div>
+            </div>
+          )}
+
+          <div className="grid-dashboard">
+            <div className="flex-col">
+              <div className="animate-enter delay-100">
+                <CurrentWeatherCard
+                  location={locationLabel}
+                  data={weather?.current}
+                  loading={loadingWeather}
+                  settings={settings}
+                />
+              </div>
+              {weather?.hourly && (
+                <div className="animate-enter delay-200">
+                  <HourlyCharts data={weather.hourly} settings={settings} />
+                </div>
+              )}
+            </div>
+
+            <div className="flex-col animate-enter delay-300">
+              <ForecastList items={weather?.daily ?? []} loading={loadingWeather} settings={settings} />
+            </div>
           </div>
-        )}
 
-        <section className="dashboard-grid">
-          <CurrentWeatherCard
-            location={locationLabel}
-            data={weather?.current}
-            loading={loadingWeather}
-            settings={settings}
-            updatedAt={
-              weather?.updatedAt
-                ? new Intl.DateTimeFormat('pt-BR', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  }).format(new Date(weather.updatedAt))
-                : undefined
-            }
-          />
-          <ForecastList items={weather?.daily ?? []} loading={loadingWeather} settings={settings} />
-        </section>
-
-        {weather?.hourly && weather.hourly.length > 0 && <HourlyCharts data={weather.hourly} settings={settings} />}
-
-        {compareMode && compareSelection.length > 0 && <CompareGrid selections={compareSelection} />}
-      </main>
-      {!online && <div className="offline-banner">Você está offline. Exibindo dados em cache quando possível.</div>}
+          {compareMode && compareSelection.length > 0 && (
+            <section className="flex-col animate-enter delay-300">
+              <h3 className="text-title">Comparativo</h3>
+              <CompareGrid selections={compareSelection} />
+            </section>
+          )}
+        </main>
+      </div>
     </div>
   )
 }

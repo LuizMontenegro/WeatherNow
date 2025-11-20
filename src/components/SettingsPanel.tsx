@@ -19,13 +19,20 @@ const Segment = <T extends string>({
   value: T
   onChange: (v: T) => void
 }) => (
-  <div className="segment">
-    <span className="segment-label">{label}</span>
-    <div className="segment-track glass-card">
+  <div className="flex-col" style={{ gap: 'var(--space-xs)' }}>
+    <span className="text-xs">{label}</span>
+    <div className="flex-row" style={{ background: 'rgba(255,255,255,0.05)', padding: '4px', borderRadius: 'var(--radius-full)' }}>
       {options.map((opt) => (
         <button
           key={opt.value}
-          className={`segment-item ${opt.value === value ? 'active' : ''}`}
+          className="btn"
+          style={{
+            flex: 1,
+            padding: '0.4rem',
+            fontSize: '0.85rem',
+            background: opt.value === value ? 'var(--color-surface-highlight)' : 'transparent',
+            color: opt.value === value ? 'var(--color-text-primary)' : 'var(--color-text-secondary)'
+          }}
           onClick={() => onChange(opt.value)}
         >
           {opt.label}
@@ -45,14 +52,24 @@ const SettingsPanel = ({ value, onChange }: SettingsPanelProps) => {
   }, [settings])
 
   return (
-    <div className="settings-wrapper">
-      <button className="theme-toggle glass-card" onClick={() => setOpen((v) => !v)}>
+    <div className="settings-wrapper" style={{ position: 'relative' }}>
+      <button className="btn btn-ghost" onClick={() => setOpen((v) => !v)}>
         <SettingsIcon size={16} />
-        <span className="toggle-label">Unidades</span>
+        <span className="text-sm">Unidades</span>
       </button>
 
       {open && (
-        <div className="settings-panel glass-card">
+        <div className="card animate-enter" style={{
+          position: 'absolute',
+          top: 'calc(100% + 0.5rem)',
+          right: 0,
+          zIndex: 100,
+          width: '280px',
+          padding: 'var(--space-md)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 'var(--space-md)'
+        }}>
           <Segment<TemperatureUnit>
             label="Temperatura"
             value={settings.temperatureUnit}
@@ -74,7 +91,7 @@ const SettingsPanel = ({ value, onChange }: SettingsPanelProps) => {
             ]}
           />
 
-          <div className="settings-summary">
+          <div className="text-xs" style={{ opacity: 0.6, textAlign: 'center' }}>
             <span>
               Exibindo: {degreeSuffix(settings.temperatureUnit)} e {windSuffix(settings.windSpeedUnit)}
             </span>

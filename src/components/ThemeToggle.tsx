@@ -7,13 +7,11 @@ interface ThemeToggleProps {
 }
 
 const ThemeToggle = ({ theme, onToggle }: ThemeToggleProps) => (
-  <button className="theme-toggle glass-card" onClick={onToggle} aria-label="Alternar tema claro/escuro">
-    <div className="toggle-track">
-      <span className={`thumb ${theme === 'dark' ? 'thumb-right' : ''}`} />
-      <Sun size={16} />
-      <Moon size={16} />
+  <button className="btn btn-ghost" onClick={onToggle} aria-label="Alternar tema claro/escuro">
+    <div className="flex-row" style={{ gap: '0.5rem' }}>
+      {theme === 'dark' ? <Moon size={16} /> : <Sun size={16} />}
+      <span className="text-sm">{theme === 'dark' ? 'Modo escuro' : 'Modo claro'}</span>
     </div>
-    <span className="toggle-label">{theme === 'dark' ? 'Modo escuro' : 'Modo claro'}</span>
   </button>
 )
 

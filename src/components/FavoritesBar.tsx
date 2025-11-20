@@ -14,9 +14,8 @@ interface FavoritesBarProps {
   onUseGeolocation: () => void
 }
 
-const labelFor = (l: LocationOption) => `${l.name}${l.admin1 ? `, ${l.admin1}` : ''}${
-  l.country ? `, ${l.country}` : ''
-}`
+const labelFor = (l: LocationOption) => `${l.name}${l.admin1 ? `, ${l.admin1}` : ''}${l.country ? `, ${l.country}` : ''
+  }`
 
 const FavoritesBar = ({
   favorites,
@@ -38,41 +37,71 @@ const FavoritesBar = ({
     !!compareSelection.find((f) => f.latitude === fav.latitude && f.longitude === fav.longitude)
 
   return (
-    <div className="favorites-bar glass-card">
-      <div className="fav-actions">
-        <button className={`fav-btn ${isCurrentSaved ? 'saved' : ''}`} onClick={onAddOrRemoveCurrent}>
-          {isCurrentSaved ? <Star size={16} /> : <StarOff size={16} />}
-          <span>{isCurrentSaved ? 'Salvo' : 'Favoritar'}</span>
-        </button>
-        <button className={`fav-btn ${comparing ? 'active' : ''}`} onClick={onToggleCompare}>
-          <Shuffle size={16} />
-          <span>Comparar</span>
-        </button>
-        <button className="fav-btn" onClick={onUseGeolocation}>
-          <Crosshair size={16} />
-          <span>Minha localização</span>
-        </button>
-      </div>
-
-      <div className="fav-list">
-        {favorites.map((fav) => (
-          <div
-            key={`${fav.latitude}-${fav.longitude}`}
-            className={`chip ${comparing && isInCompare(fav) ? 'chip-active' : ''}`}
+    <div className="card" style={{ padding: 'var(--space-md)' }}>
+      <div className="flex-col" style={{ gap: 'var(--space-md)' }}>
+        <div className="flex-row" style={{ flexWrap: 'wrap' }}>
+          <button
+            className={`btn ${isCurrentSaved ? 'btn-primary' : 'btn-ghost'}`}
+            onClick={onAddOrRemoveCurrent}
           >
-            <button
-              className="chip-main"
-              onClick={() => (comparing ? onToggleCompareItem(fav) : onSelect(fav))}
-              title={labelFor(fav)}
-            >
-              {labelFor(fav)}
-            </button>
-            <button className="chip-remove" onClick={() => onRemove(fav)} aria-label="Remover favorito">
-              <X size={14} />
-            </button>
+            {isCurrentSaved ? <Star size={16} fill="currentColor" /> : <StarOff size={16} />}
+            <span>{isCurrentSaved ? 'Salvo' : 'Favoritar'}</span>
+          </button>
+          <button
+            className={`btn ${comparing ? 'btn-primary' : 'btn-ghost'}`}
+            onClick={onToggleCompare}
+          >
+            <Shuffle size={16} />
+            <span>Comparar</span>
+          </button>
+          <button className="btn btn-ghost" onClick={onUseGeolocation}>
+            <Crosshair size={16} />
+            <span>Minha localização</span>
+          </button>
+        </div>
+
+        {favorites.length > 0 && (
+          <div className="flex-row" style={{ flexWrap: 'wrap', gap: 'var(--space-sm)' }}>
+            {favorites.map((fav) => (
+              <div
+                key={`${fav.latitude}-${fav.longitude}`}
+                className="flex-row"
+                style={{
+                  gap: 'var(--space-xs)',
+                  background: comparing && isInCompare(fav) ? 'var(--color-accent-glow)' : 'rgba(255,255,255,0.05)',
+                  border: `1px solid ${comparing && isInCompare(fav) ? 'var(--color-accent)' : 'var(--color-border)'}`,
+                  borderRadius: 'var(--radius-full)',
+                  padding: '0.3rem 0.4rem 0.3rem 0.8rem',
+                  transition: 'var(--transition-fast)'
+                }}
+              >
+                <button
+                  onClick={() => (comparing ? onToggleCompareItem(fav) : onSelect(fav))}
+                  title={labelFor(fav)}
+                  className="text-sm"
+                  style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}
+                >
+                  {fav.name}
+                </button>
+                <button
+                  onClick={() => onRemove(fav)}
+                  aria-label="Remover favorito"
+                  style={{
+                    display: 'grid',
+                    placeItems: 'center',
+                    padding: '0.2rem',
+                    color: 'var(--color-text-tertiary)',
+                    borderRadius: '50%'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.color = 'var(--color-danger)'}
+                  onMouseLeave={(e) => e.currentTarget.style.color = 'var(--color-text-tertiary)'}
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            ))}
           </div>
-        ))}
-        {favorites.length === 0 && <span className="muted">Nenhum favorito ainda</span>}
+        )}
       </div>
     </div>
   )

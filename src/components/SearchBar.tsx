@@ -14,9 +14,9 @@ const SearchBar = ({ value, onChange, suggestions, loading, onSelect }: SearchBa
   const listId = useId()
   const [activeIndex, setActiveIndex] = useState<number>(-1)
   const inputRef = useRef<HTMLInputElement | null>(null)
+  const [focused, setFocused] = useState(false)
 
   useEffect(() => {
-    // Reset highlight quando sugestões mudarem
     setActiveIndex(suggestions.length ? 0 : -1)
   }, [suggestions.length])
 
@@ -33,29 +33,63 @@ const SearchBar = ({ value, onChange, suggestions, loading, onSelect }: SearchBa
       onSelect(suggestions[activeIndex])
     } else if (e.key === 'Escape') {
       setActiveIndex(-1)
+      inputRef.current?.blur()
     }
   }
 
   return (
-    <div className="search-area">
-      <div className="search-bar glass-card" role="combobox" aria-expanded={suggestions.length > 0} aria-controls={listId}>
-        <Search size={18} className="icon-muted" />
+    <div style={{ position: 'relative', zIndex: 50 }}>
+      <div
+        className="flex-row"
+        style={{
+          background: 'var(--color-surface)',
+          border: `1px solid ${focused ? 'var(--color-accent)' : 'var(--color-border)'}`,
+          borderRadius: 'var(--radius-full)',
+          padding: '0.8rem 1.2rem',
+          transition: 'var(--transition-fast)',
+          boxShadow: focused ? 'var(--shadow-glow)' : 'var(--shadow-sm)'
+        }}
+      >
+        <Search size={20} style={{ color: focused ? 'var(--color-accent)' : 'var(--color-text-tertiary)' }} />
         <input
           ref={inputRef}
           value={value}
           onChange={(event) => onChange(event.target.value)}
           onKeyDown={onKeyDown}
-          placeholder="Busque por cidade ou região"
-          aria-autocomplete="list"
+          onFocus={() => setFocused(true)}
+          onBlur={() => setTimeout(() => setFocused(false), 200)}
+          placeholder="Busque por cidade ou região..."
+          style={{
+            width: '100%',
+            background: 'transparent',
+            border: 'none',
+            outline: 'none',
+            color: 'var(--color-text-primary)',
+            fontSize: '1rem'
+          }}
+          role="combobox"
+          aria-expanded={suggestions.length > 0}
           aria-controls={listId}
-          aria-activedescendant={activeIndex >= 0 ? `${listId}-opt-${activeIndex}` : undefined}
-          aria-label="Buscar localização"
+          aria-autocomplete="list"
         />
-        {loading && <Loader2 size={18} className="spin icon-muted" />}
+        {loading && <Loader2 size={20} className="spin" style={{ color: 'var(--color-accent)' }} />}
       </div>
 
       {suggestions.length > 0 && (
-        <div id={listId} role="listbox" className="suggestions glass-card">
+        <div
+          id={listId}
+          role="listbox"
+          className="card animate-enter"
+          style={{
+            position: 'absolute',
+            top: 'calc(100% + 0.5rem)',
+            left: 0,
+            right: 0,
+            padding: '0.5rem',
+            maxHeight: '300px',
+            overflowY: 'auto'
+          }}
+        >
           {suggestions.map((option, idx) => (
             <button
               id={`${listId}-opt-${idx}`}
@@ -63,13 +97,22 @@ const SearchBar = ({ value, onChange, suggestions, loading, onSelect }: SearchBa
               aria-selected={idx === activeIndex}
               key={`${option.latitude}-${option.longitude}`}
               onClick={() => onSelect(option)}
-              className="suggestion-line"
-              style={idx === activeIndex ? { background: 'rgba(255,255,255,0.12)' } : undefined}
+              className="flex-row"
+              style={{
+                width: '100%',
+                padding: '0.8rem 1rem',
+                borderRadius: 'var(--radius-sm)',
+                background: idx === activeIndex ? 'var(--color-surface-highlight)' : 'transparent',
+                textAlign: 'left',
+                cursor: 'pointer',
+                transition: 'background 0.1s'
+              }}
+              onMouseEnter={() => setActiveIndex(idx)}
             >
-              <MapPin size={18} />
+              <MapPin size={18} style={{ color: idx === activeIndex ? 'var(--color-accent)' : 'var(--color-text-tertiary)' }} />
               <div>
-                <p>{option.name}</p>
-                <span>
+                <p className="text-sm" style={{ fontWeight: 500, color: idx === activeIndex ? 'var(--color-text-primary)' : 'var(--color-text-secondary)' }}>{option.name}</p>
+                <span className="text-xs" style={{ opacity: 0.7 }}>
                   {[option.admin1, option.country].filter(Boolean).join(', ')}
                 </span>
               </div>

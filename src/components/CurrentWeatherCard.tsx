@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Droplets, Gauge, ThermometerSun, Wind } from 'lucide-react'
+import { Droplets, Gauge, Wind } from 'lucide-react'
 import { getWeatherPresentation } from '../utils/weatherMeta'
 import type { CurrentWeather } from '../types/weather'
 import type { AppSettings } from '../types/settings'
@@ -14,26 +14,20 @@ interface CurrentWeatherCardProps {
 }
 
 const Metric = ({ icon, label, value }: { icon: ReactNode; label: string; value: string }) => (
-  <div className="metric">
-    <div className="metric-icon">{icon}</div>
+  <div className="flex-row" style={{ gap: 'var(--space-sm)', padding: 'var(--space-sm)', background: 'rgba(255,255,255,0.03)', borderRadius: 'var(--radius-md)' }}>
+    <div style={{ color: 'var(--color-accent)' }}>{icon}</div>
     <div>
-      <span>{label}</span>
-      <strong>{value}</strong>
+      <span className="text-xs" style={{ display: 'block', marginBottom: '2px' }}>{label}</span>
+      <strong className="text-sm">{value}</strong>
     </div>
   </div>
 )
 
-const CurrentWeatherCard = ({ location, data, loading, updatedAt, settings }: CurrentWeatherCardProps) => {
+const CurrentWeatherCard = ({ location, data, loading, settings }: CurrentWeatherCardProps) => {
   if (loading || !data) {
     return (
-      <div className="current-card glass-card skeleton">
-        <div className="skeleton-row" />
-        <div className="skeleton-temp" />
-        <div className="skeleton-metrics">
-          <span />
-          <span />
-          <span />
-        </div>
+      <div className="card" style={{ minHeight: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <span className="text-body">Carregando...</span>
       </div>
     )
   }
@@ -41,41 +35,47 @@ const CurrentWeatherCard = ({ location, data, loading, updatedAt, settings }: Cu
   const { Icon, label } = getWeatherPresentation(data.weatherCode, data.isDay)
 
   return (
-    <div className="current-card glass-card">
-      <header>
-        <div>
-          <p className="eyebrow">Agora</p>
-          <h2>{location}</h2>
-          {updatedAt && <span className="timestamp">Atualizado {updatedAt}</span>}
-        </div>
-        <div className="condition-icon">
-          <Icon size={48} />
-        </div>
-      </header>
-      <div className="temperature-display">
-        <span className="temperature-value">
-          {Math.round(data.temperature)}{settings ? degreeSuffix(settings.temperatureUnit) : '°'}
-        </span>
-        <div>
-          <p className="condition">{label}</p>
-          <span>
-            Sensação {Math.round(data.apparentTemperature)}{settings ? degreeSuffix(settings.temperatureUnit) : '°'}
+    <div className="card">
+      <div className="flex-col" style={{ gap: 'var(--space-xl)' }}>
+        <header className="flex-row" style={{ justifyContent: 'space-between' }}>
+          <div>
+            <p className="text-xs" style={{ color: 'var(--color-accent)' }}>Agora</p>
+            <h2 className="text-title">{location}</h2>
+          </div>
+          <div style={{
+            width: '64px',
+            height: '64px',
+            background: 'var(--color-surface-highlight)',
+            borderRadius: 'var(--radius-full)',
+            display: 'grid',
+            placeItems: 'center',
+            color: 'var(--color-accent)'
+          }}>
+            <Icon size={32} />
+          </div>
+        </header>
+
+        <div className="flex-row" style={{ alignItems: 'flex-end', gap: 'var(--space-lg)' }}>
+          <span className="text-display" style={{ lineHeight: 1 }}>
+            {Math.round(data.temperature)}{settings ? degreeSuffix(settings.temperatureUnit) : '°'}
           </span>
+          <div style={{ paddingBottom: '0.5rem' }}>
+            <p className="text-title" style={{ fontWeight: 500 }}>{label}</p>
+            <span className="text-body">
+              Sensação {Math.round(data.apparentTemperature)}{settings ? degreeSuffix(settings.temperatureUnit) : '°'}
+            </span>
+          </div>
         </div>
-      </div>
-      <div className="metrics-grid">
-        <Metric
-          icon={<ThermometerSun size={18} />}
-          label="Sensação"
-          value={`${Math.round(data.apparentTemperature)}${settings ? degreeSuffix(settings.temperatureUnit) : '°'}`}
-        />
-        <Metric icon={<Droplets size={18} />} label="Umidade" value={`${Math.round(data.humidity)}%`} />
-        <Metric
-          icon={<Wind size={18} />}
-          label="Vento"
-          value={`${Math.round(data.windSpeed)} ${settings ? windSuffix(settings.windSpeedUnit) : 'km/h'}`}
-        />
-        <Metric icon={<Gauge size={18} />} label="Código" value={`WMO ${data.weatherCode}`} />
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 'var(--space-md)' }}>
+          <Metric icon={<Droplets size={18} />} label="Umidade" value={`${Math.round(data.humidity)}%`} />
+          <Metric
+            icon={<Wind size={18} />}
+            label="Vento"
+            value={`${Math.round(data.windSpeed)} ${settings ? windSuffix(settings.windSpeedUnit) : 'km/h'}`}
+          />
+          <Metric icon={<Gauge size={18} />} label="Código WMO" value={`${data.weatherCode}`} />
+        </div>
       </div>
     </div>
   )
